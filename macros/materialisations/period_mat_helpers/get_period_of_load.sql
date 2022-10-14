@@ -26,6 +26,22 @@
 
 
 
+{%- macro greenplum__get_period_of_load(period, offset, start_timestamp) -%}
+
+    {% set period_of_load_sql -%}
+        SELECT DATE_TRUNC('{{ period }}', '{{ start_timestamp }}'::DATE + INTERVAL '{{ offset }} {{ period }}') AS period_of_load
+    {%- endset %}
+    {{ log('period_of_load_sql:', info=True) }}
+    {{ log(period_of_load_sql | string, info=True) }}
+    {% set period_of_load_dict = dbtvault.get_query_results_as_dict(period_of_load_sql) %}
+
+    {% set period_of_load = period_of_load_dict['period_of_load'][0] | string %}
+
+    {% do return(period_of_load) %}
+{%- endmacro -%}
+
+
+
 
 {%- macro bigquery__get_period_of_load(period, offset, start_timestamp) -%}
 

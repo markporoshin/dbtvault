@@ -93,7 +93,18 @@ records_to_insert AS (
     SELECT {{ dbtvault.prefix(source_cols, 'a', alias_target='target') }}
     FROM {{ ns.last_cte }} AS a
     {%- if dbtvault.is_any_incremental() %}
-    LEFT JOIN {{ this }} AS d
+    LEFT JOIN (
+        SELECT
+            {{ src_pk }}
+        FROM {{ this }}
+        {%- if model.config.materialized == 'vault_insert_by_period' %}
+        WHERE
+        __PERIOD_FILTER__
+        {%- elif model.config.materialized == 'vault_insert_by_rank' %}
+        WHERE
+        __RANK_FILTER__
+        {%- endif -%}
+    ) AS d
     ON {{ dbtvault.multikey(src_pk, prefix=['a','d'], condition='=') }}
     WHERE {{ dbtvault.multikey(src_pk, prefix='d', condition='IS NULL') }}
     {%- endif %}

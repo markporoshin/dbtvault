@@ -44,6 +44,40 @@
 
 
 
+{% macro greenplum__get_period_boundaries(target_schema, target_table, timestamp_field, start_date, stop_date, period) -%}
+
+    {% set period_boundary_sql -%}
+        WITH period_data AS (
+            SELECT
+                COALESCE(MAX({{ timestamp_field }}), '{{ start_date }}')::TIMESTAMP AS start_timestamp,
+                COALESCE({{ dbt_utils.dateadd('millisecond', 86399999, "NULLIF('" ~ stop_date | lower ~ "','none')::TIMESTAMP") }},
+                         {{ dbtvault.current_timestamp() }} ) AS stop_timestamp
+            FROM {{ target_schema }}.{{ target_table }}
+        )
+        SELECT
+            start_timestamp,
+            stop_timestamp,
+            {{ dbt_utils.datediff('start_timestamp',
+                                  'stop_timestamp',
+                                  period) }} + 1 AS num_periods
+        FROM period_data
+    {%- endset %}
+    {{ log('start_date: ' + start_date|string, info=True) }}
+    {{ log('stop_date: ' + stop_date|string, info=True) }}
+    {{ log('period: ' + period|string, info=True) }}
+    {{ log('period_boundary_sql:', info=True) }}
+    {{ log(period_boundary_sql, info=True) }}
+    {% set period_boundaries_dict = dbtvault.get_query_results_as_dict(period_boundary_sql) %}
+    {{ log('period_boundaries_dict:', info=True) }}
+    {{ log(period_boundaries_dict|string, info=True) }}
+    {% set period_boundaries = {'start_timestamp': start_date | string,
+                                'stop_timestamp': stop_date | string,
+                                'num_periods': 1 | int} %}
+    {{ log(period_boundaries|string, info=True) }}
+    {% do return(period_boundaries) %}
+{%- endmacro %}
+
+
 {% macro bigquery__get_period_boundaries(target_schema, target_table, timestamp_field, start_date, stop_date, period) -%}
 
     {% set period_boundary_sql -%}

@@ -29,6 +29,30 @@
 
 
 
+{% macro greenplum__replace_placeholder_with_period_filter(core_sql, timestamp_field, start_timestamp, stop_timestamp, offset, period) %}
+    {%- set period_filter -%}
+        ({{ timestamp_field }}::TIMESTAMP
+        >= DATE_TRUNC('{{ period }}', '{{ start_timestamp }}'::TIMESTAMP + INTERVAL '{{ offset }} {{ period }}') AND
+             {{ timestamp_field }}::TIMESTAMP < DATE_TRUNC('{{ period }}', '{{ start_timestamp }}'::TIMESTAMP + INTERVAL '{{ offset }} {{ period }}' + INTERVAL '1 {{ period }}'))
+      AND ({{ timestamp_field }}::TIMESTAMP >= '{{ start_timestamp }}'::TIMESTAMP)
+    {%- endset -%}
+
+    {% if stop_timestamp is not none %}
+        {%- set period_filter -%}
+            DATE_TRUNC('{{ period }}', '{{ start_timestamp }}'::TIMESTAMP + INTERVAL '{{ offset }} {{ period }}') <= {{ timestamp_field }}::TIMESTAMP
+            AND
+            {{ timestamp_field }}::TIMESTAMP < DATE_TRUNC('{{ period }}', '{{ stop_timestamp }}'::TIMESTAMP + INTERVAL '{{ offset }} {{ period }}')
+        {%- endset -%}
+    {% endif %}
+
+    {%- set filtered_sql = core_sql | replace("__PERIOD_FILTER__", period_filter) -%}
+
+    {% do return(filtered_sql) %}
+{% endmacro %}
+
+
+
+
 {% macro bigquery__replace_placeholder_with_period_filter(core_sql, timestamp_field, start_timestamp, stop_timestamp, offset, period) %}
 
     {%- set period_filter -%}

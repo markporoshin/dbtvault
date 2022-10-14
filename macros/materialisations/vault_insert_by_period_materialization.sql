@@ -73,11 +73,14 @@
             {{ dbt_utils.log_info("Running for {} {} of {} ({}) [{}]".format(period, iteration_number, period_boundaries.num_periods, period_of_load, model.unique_id)) }}
 
             {% set tmp_relation = make_temp_relation(target_relation) %}
-
+            {{ log('period: ' + period|string, info=True) }}
+            {{ log('start_timestamp: ' + period_boundaries.start_timestamp|string, info=True) }}
+            {{ log('stop_timestamp: ' + period_boundaries.stop_timestamp|string, info=True) }}
             {% set tmp_table_sql = dbtvault.get_period_filter_sql(target_cols_csv, sql, timestamp_field, period,
                                                                   period_boundaries.start_timestamp,
                                                                   period_boundaries.stop_timestamp, i) %}
-
+            {{ log('tmp_table_sql:', info=True) }}
+            {{ log(tmp_table_sql | string, info=True) }}
             {# This call statement drops and then creates a temporary table #}
             {# but MSSQL will fail to drop any temporary table created by a previous loop iteration #}
             {# See MSSQL note and drop code below #}
